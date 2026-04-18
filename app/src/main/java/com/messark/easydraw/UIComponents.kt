@@ -31,12 +31,36 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
 
 @Composable
-fun FilePickerScreen(onModeSelected: (DrawingMode) -> Unit) {
+fun FilePickerScreen(
+    sensitivity: Float,
+    onSensitivityChanged: (Float) -> Unit,
+    onModeSelected: (DrawingMode) -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        Text("Swipe sensitivity", style = MaterialTheme.typography.titleMedium)
+
+        Slider(
+            value = sensitivity,
+            onValueChange = onSensitivityChanged,
+            modifier = Modifier
+                .padding(horizontal = 32.dp, vertical = 8.dp)
+                .fillMaxWidth(0.8f)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(0.8f),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("High Sensitivity", style = MaterialTheme.typography.labelSmall)
+            Text("Fixed Thickness", style = MaterialTheme.typography.labelSmall)
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
         Button(
             onClick = { onModeSelected(DrawingMode.OVER_LINES) },
             modifier = Modifier
@@ -96,6 +120,7 @@ fun DrawingCanvasScreen(
     bitmap: android.graphics.Bitmap?,
     strokes: List<Stroke>,
     drawingMode: DrawingMode,
+    sensitivity: Float,
     currentColor: Color,
     onColorSelected: (Color) -> Unit,
     onStrokeStarted: (Offset) -> Unit,
@@ -113,7 +138,13 @@ fun DrawingCanvasScreen(
     val maxWidthPx = with(density) { MainViewModel.MAX_WIDTH_DP.dp.toPx() }
 
     // Constants for speed-based width
-    val maxSpeedPxPerMs = with(density) { 5.dp.toPx() } // Adjust as needed
+    // sensitivity = 0.75 was roughly 5 dp/ms
+    // We want sensitivity = 0 to be very sensitive (maxSpeed is small)
+    // and sensitivity = 1 to be fixed thickness (maxSpeed is effectively 0 but we handle it)
+    val maxSpeedPxPerMs = with(density) {
+        val baseSpeed = 5.dp.toPx()
+        (baseSpeed * (sensitivity / 0.75f)).coerceAtLeast(0.1.dp.toPx())
+    }
     val smoothingFactor = 0.2f // For EMA
 
     var lastOffset by remember { mutableStateOf<Offset?>(null) }
@@ -162,9 +193,17 @@ fun DrawingCanvasScreen(
                                 val timeDelta = (currentTimestamp - lastTimestamp).coerceAtLeast(1L)
                                 val speed = distance / timeDelta
 
-                                // Fast speed = thin line, slow speed = thick line
-                                val targetWidth = (maxWidthPx - (speed / maxSpeedPxPerMs) * (maxWidthPx - minWidthPx))
-                                    .coerceIn(minWidthPx, maxWidthPx)
+                                val targetWidth = if (sensitivity >= 0.99f) {
+                                    maxWidthPx
+                                } else {
+                                    // ratio: 0 (slow) to 1 (max speed)
+                                    val ratio = (speed / maxSpeedPxPerMs).coerceIn(0f, 1f)
+                                    // Use quadratic drop-off: (1 - ratio)^2
+                                    // At ratio=0, width is maxWidth
+                                    // At ratio=1, width is minWidth
+                                    val scale = (1f - ratio) * (1f - ratio)
+                                    minWidthPx + scale * (maxWidthPx - minWidthPx)
+                                }
 
                                 // Apply smoothing
                                 currentSmoothWidth = currentSmoothWidth + smoothingFactor * (targetWidth - currentSmoothWidth)

@@ -33,6 +33,7 @@ class MainActivity : ComponentActivity() {
             EasyDrawTheme {
                 val currentScreen by viewModel.currentScreen.collectAsState()
                 val drawingMode by viewModel.drawingMode.collectAsState()
+                val sensitivity by viewModel.sensitivity.collectAsState()
                 val selectedUri by viewModel.selectedUri.collectAsState()
                 val pdfThumbnails by viewModel.pdfThumbnails.collectAsState()
                 val selectedBitmap by viewModel.selectedBitmap.collectAsState()
@@ -68,10 +69,14 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
                         when (currentScreen) {
-                            AppScreen.FilePicker -> FilePickerScreen { mode ->
-                                viewModel.setDrawingMode(mode)
-                                launcher.launch(arrayOf("image/*", "application/pdf"))
-                            }
+                            AppScreen.FilePicker -> FilePickerScreen(
+                                sensitivity = sensitivity,
+                                onSensitivityChanged = { viewModel.setSensitivity(it) },
+                                onModeSelected = { mode ->
+                                    viewModel.setDrawingMode(mode)
+                                    launcher.launch(arrayOf("image/*", "application/pdf"))
+                                }
+                            )
                             AppScreen.PageSelection -> PageSelectionScreen(pdfThumbnails) { pageIndex ->
                                 scope.launch {
                                     selectedUri?.let { uri ->
@@ -90,6 +95,7 @@ class MainActivity : ComponentActivity() {
                                 bitmap = selectedBitmap,
                                 strokes = strokes,
                                 drawingMode = drawingMode,
+                                sensitivity = sensitivity,
                                 currentColor = currentColor,
                                 onColorSelected = { viewModel.setCurrentColor(it) },
                                 onStrokeStarted = { _ ->
