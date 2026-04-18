@@ -46,6 +46,9 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _drawingMode = MutableStateFlow(DrawingMode.OVER_LINES)
     val drawingMode: StateFlow<DrawingMode> = _drawingMode.asStateFlow()
 
+    private val _sensitivity = MutableStateFlow(0.5f)
+    val sensitivity: StateFlow<Float> = _sensitivity.asStateFlow()
+
     private val _selectedUri = MutableStateFlow<Uri?>(null)
     val selectedUri: StateFlow<Uri?> = _selectedUri.asStateFlow()
 
@@ -67,6 +70,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setDrawingMode(mode: DrawingMode) {
         _drawingMode.value = mode
+    }
+
+    fun setSensitivity(value: Float) {
+        _sensitivity.value = value
     }
 
     fun selectUri(uri: Uri?) {
