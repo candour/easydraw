@@ -39,8 +39,6 @@ class MainActivity : ComponentActivity() {
                 val strokes by viewModel.strokes.collectAsState()
                 val currentColor by viewModel.currentColor.collectAsState()
                 val scope = rememberCoroutineScope()
-                val density = LocalDensity.current
-                val strokeWidthPx = with(density) { 40.dp.toPx() }
 
                 val launcher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.OpenDocument()
@@ -94,17 +92,11 @@ class MainActivity : ComponentActivity() {
                                 drawingMode = drawingMode,
                                 currentColor = currentColor,
                                 onColorSelected = { viewModel.setCurrentColor(it) },
-                                onStrokeStarted = { offset: Offset ->
-                                    val path = Path().apply { moveTo(offset.x, offset.y) }
-                                    viewModel.addStroke(Stroke(path, currentColor, strokeWidthPx))
+                                onStrokeStarted = { _ ->
+                                    viewModel.addStroke(Stroke(emptyList(), currentColor))
                                 },
-                                onStrokeUpdated = { offset: Offset ->
-                                    val currentStrokes = viewModel.strokes.value
-                                    if (currentStrokes.isNotEmpty()) {
-                                        val lastPath = currentStrokes.last().path
-                                        lastPath.lineTo(offset.x, offset.y)
-                                        viewModel.updateLastStroke(lastPath)
-                                    }
+                                onStrokeUpdated = { start: Offset, end: Offset, width: Float ->
+                                    viewModel.addSegmentToLastStroke(LineSegment(start, end, width))
                                 },
                                 onUndo = { viewModel.undo() },
                                 onClose = { viewModel.reset() }

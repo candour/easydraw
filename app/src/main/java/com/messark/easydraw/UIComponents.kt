@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke as DrawScopeStroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.Image
@@ -98,7 +99,7 @@ fun DrawingCanvasScreen(
     currentColor: Color,
     onColorSelected: (Color) -> Unit,
     onStrokeStarted: (Offset) -> Unit,
-    onStrokeUpdated: (Offset) -> Unit,
+    onStrokeUpdated: (Offset, Offset, Float) -> Unit,
     onUndo: () -> Unit,
     onClose: () -> Unit
 ) {
@@ -106,6 +107,18 @@ fun DrawingCanvasScreen(
         Color.Red, Color(0xFFFFA500), Color.Yellow, Color.Green,
         Color.Blue, Color(0xFF800080), Color(0xFF8B4513), Color.Black
     )
+
+    val density = LocalDensity.current
+    val minWidthPx = with(density) { MainViewModel.MIN_WIDTH_DP.dp.toPx() }
+    val maxWidthPx = with(density) { MainViewModel.MAX_WIDTH_DP.dp.toPx() }
+
+    // Constants for speed-based width
+    val maxSpeedPxPerMs = with(density) { 5.dp.toPx() } // Adjust as needed
+    val smoothingFactor = 0.2f // For EMA
+
+    var lastOffset by remember { mutableStateOf<Offset?>(null) }
+    var lastTimestamp by remember { mutableLongStateOf(0L) }
+    var currentSmoothWidth by remember { mutableFloatStateOf(maxWidthPx) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // Top Bar
@@ -132,10 +145,41 @@ fun DrawingCanvasScreen(
                 .background(Color.White)
                 .pointerInput(Unit) {
                     detectDragGestures(
-                        onDragStart = { offset -> onStrokeStarted(offset) },
+                        onDragStart = { offset ->
+                            lastOffset = offset
+                            lastTimestamp = System.currentTimeMillis()
+                            currentSmoothWidth = maxWidthPx
+                            onStrokeStarted(offset)
+                        },
                         onDrag = { change, _ ->
                             change.consume()
-                            onStrokeUpdated(change.position)
+                            val currentOffset = change.position
+                            val currentTimestamp = System.currentTimeMillis()
+                            val prevOffset = lastOffset
+
+                            if (prevOffset != null) {
+                                val distance = (currentOffset - prevOffset).getDistance()
+                                val timeDelta = (currentTimestamp - lastTimestamp).coerceAtLeast(1L)
+                                val speed = distance / timeDelta
+
+                                // Fast speed = thin line, slow speed = thick line
+                                val targetWidth = (maxWidthPx - (speed / maxSpeedPxPerMs) * (maxWidthPx - minWidthPx))
+                                    .coerceIn(minWidthPx, maxWidthPx)
+
+                                // Apply smoothing
+                                currentSmoothWidth = currentSmoothWidth + smoothingFactor * (targetWidth - currentSmoothWidth)
+
+                                onStrokeUpdated(prevOffset, currentOffset, currentSmoothWidth)
+                            }
+
+                            lastOffset = currentOffset
+                            lastTimestamp = currentTimestamp
+                        },
+                        onDragEnd = {
+                            lastOffset = null
+                        },
+                        onDragCancel = {
+                            lastOffset = null
                         }
                     )
                 }
@@ -153,15 +197,15 @@ fun DrawingCanvasScreen(
                 modifier = Modifier.fillMaxSize()
             ) {
                 strokes.forEach { stroke ->
-                    drawPath(
-                        path = stroke.path,
-                        color = stroke.color,
-                        style = DrawScopeStroke(
-                            width = stroke.width,
-                            cap = StrokeCap.Round,
-                            join = StrokeJoin.Round
+                    stroke.segments.forEach { segment ->
+                        drawLine(
+                            color = stroke.color,
+                            start = segment.start,
+                            end = segment.end,
+                            strokeWidth = segment.width,
+                            cap = StrokeCap.Round
                         )
-                    )
+                    }
                 }
             }
 
