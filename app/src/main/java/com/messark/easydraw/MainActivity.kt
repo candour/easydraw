@@ -1,4 +1,4 @@
-package com.example.app
+package com.messark.easydraw
 
 import android.net.Uri
 import android.os.Bundle
@@ -20,7 +20,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
-import com.example.app.ui.theme.ExampleAppTheme
+import com.messark.easydraw.ui.theme.EasyDrawTheme
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
@@ -30,7 +30,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            ExampleAppTheme {
+            EasyDrawTheme {
                 val currentScreen by viewModel.currentScreen.collectAsState()
                 val selectedUri by viewModel.selectedUri.collectAsState()
                 val pdfThumbnails by viewModel.pdfThumbnails.collectAsState()
