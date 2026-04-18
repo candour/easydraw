@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.app"
+    namespace = "com.messark.easydraw"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.example.app"
+        applicationId = "com.messark.easydraw"
         minSdk = 26
         targetSdk = 35
         versionCode = 1

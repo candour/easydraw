@@ -1,4 +1,4 @@
-package com.example.app
+package com.messark.easydraw
 
 import android.app.Application
 import androidx.compose.ui.graphics.Color

@@ -1,4 +1,4 @@
-package com.example.app
+package com.messark.easydraw
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
