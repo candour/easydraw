@@ -32,6 +32,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             EasyDrawTheme {
                 val currentScreen by viewModel.currentScreen.collectAsState()
+                val drawingMode by viewModel.drawingMode.collectAsState()
                 val selectedUri by viewModel.selectedUri.collectAsState()
                 val pdfThumbnails by viewModel.pdfThumbnails.collectAsState()
                 val selectedBitmap by viewModel.selectedBitmap.collectAsState()
@@ -53,7 +54,12 @@ class MainActivity : ComponentActivity() {
                                 viewModel.setPdfThumbnails(thumbnails)
                                 viewModel.navigateTo(AppScreen.PageSelection)
                             } else {
-                                val bitmap = FileUtils.decodeBitmapFromUri(this@MainActivity, uri)
+                                var bitmap = FileUtils.decodeBitmapFromUri(this@MainActivity, uri)
+                                if (bitmap != null && drawingMode == DrawingMode.UNDER_LINES) {
+                                    val processed = FileUtils.processBitmapForUnderLines(bitmap)
+                                    bitmap.recycle()
+                                    bitmap = processed
+                                }
                                 viewModel.selectBitmap(bitmap)
                                 viewModel.navigateTo(AppScreen.DrawingCanvas)
                             }
@@ -64,13 +70,19 @@ class MainActivity : ComponentActivity() {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     Box(modifier = Modifier.padding(innerPadding)) {
                         when (currentScreen) {
-                            AppScreen.FilePicker -> FilePickerScreen {
+                            AppScreen.FilePicker -> FilePickerScreen { mode ->
+                                viewModel.setDrawingMode(mode)
                                 launcher.launch(arrayOf("image/*", "application/pdf"))
                             }
                             AppScreen.PageSelection -> PageSelectionScreen(pdfThumbnails) { pageIndex ->
                                 scope.launch {
                                     selectedUri?.let { uri ->
-                                        val bitmap = FileUtils.renderPdfPage(this@MainActivity, uri, pageIndex)
+                                        var bitmap = FileUtils.renderPdfPage(this@MainActivity, uri, pageIndex)
+                                        if (bitmap != null && drawingMode == DrawingMode.UNDER_LINES) {
+                                            val processed = FileUtils.processBitmapForUnderLines(bitmap)
+                                            bitmap.recycle()
+                                            bitmap = processed
+                                        }
                                         viewModel.selectBitmap(bitmap)
                                         viewModel.navigateTo(AppScreen.DrawingCanvas)
                                     }
@@ -79,6 +91,7 @@ class MainActivity : ComponentActivity() {
                             AppScreen.DrawingCanvas -> DrawingCanvasScreen(
                                 bitmap = selectedBitmap,
                                 strokes = strokes,
+                                drawingMode = drawingMode,
                                 currentColor = currentColor,
                                 onColorSelected = { viewModel.setCurrentColor(it) },
                                 onStrokeStarted = { offset: Offset ->
