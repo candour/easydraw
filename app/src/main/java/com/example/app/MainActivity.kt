@@ -1,23 +1,27 @@
 package com.example.app
 
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import com.example.app.ui.theme.ExampleAppTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private val viewModel: MainViewModel by viewModels()
@@ -27,27 +31,75 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ExampleAppTheme {
-                val greetingMessage by viewModel.greetingMessage.collectAsState()
+                val currentScreen by viewModel.currentScreen.collectAsState()
+                val selectedUri by viewModel.selectedUri.collectAsState()
+                val pdfThumbnails by viewModel.pdfThumbnails.collectAsState()
+                val selectedBitmap by viewModel.selectedBitmap.collectAsState()
+                val strokes by viewModel.strokes.collectAsState()
+                val currentColor by viewModel.currentColor.collectAsState()
+                val scope = rememberCoroutineScope()
+                val density = LocalDensity.current
+                val strokeWidthPx = with(density) { 40.dp.toPx() }
 
-                Scaffold(
-                    modifier = Modifier.fillMaxSize()
-                ) { innerPadding ->
-                    Greeting(
-                        name = greetingMessage,
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                val launcher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.OpenDocument()
+                ) { uri: Uri? ->
+                    if (uri != null) {
+                        viewModel.selectUri(uri)
+                        val type = contentResolver.getType(uri)
+                        scope.launch {
+                            if (type == "application/pdf") {
+                                val thumbnails = FileUtils.renderPdfPages(this@MainActivity, uri)
+                                viewModel.setPdfThumbnails(thumbnails)
+                                viewModel.navigateTo(AppScreen.PageSelection)
+                            } else {
+                                val bitmap = FileUtils.decodeBitmapFromUri(this@MainActivity, uri)
+                                viewModel.selectBitmap(bitmap)
+                                viewModel.navigateTo(AppScreen.DrawingCanvas)
+                            }
+                        }
+                    }
+                }
+
+                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                    Box(modifier = Modifier.padding(innerPadding)) {
+                        when (currentScreen) {
+                            AppScreen.FilePicker -> FilePickerScreen {
+                                launcher.launch(arrayOf("image/*", "application/pdf"))
+                            }
+                            AppScreen.PageSelection -> PageSelectionScreen(pdfThumbnails) { pageIndex ->
+                                scope.launch {
+                                    selectedUri?.let { uri ->
+                                        val bitmap = FileUtils.renderPdfPage(this@MainActivity, uri, pageIndex)
+                                        viewModel.selectBitmap(bitmap)
+                                        viewModel.navigateTo(AppScreen.DrawingCanvas)
+                                    }
+                                }
+                            }
+                            AppScreen.DrawingCanvas -> DrawingCanvasScreen(
+                                bitmap = selectedBitmap,
+                                strokes = strokes,
+                                currentColor = currentColor,
+                                onColorSelected = { viewModel.setCurrentColor(it) },
+                                onStrokeStarted = { offset: Offset ->
+                                    val path = Path().apply { moveTo(offset.x, offset.y) }
+                                    viewModel.addStroke(Stroke(path, currentColor, strokeWidthPx))
+                                },
+                                onStrokeUpdated = { offset: Offset ->
+                                    val currentStrokes = viewModel.strokes.value
+                                    if (currentStrokes.isNotEmpty()) {
+                                        val lastPath = currentStrokes.last().path
+                                        lastPath.lineTo(offset.x, offset.y)
+                                        viewModel.updateLastStroke(lastPath)
+                                    }
+                                },
+                                onUndo = { viewModel.undo() },
+                                onClose = { viewModel.reset() }
+                            )
+                        }
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(
-            text = name,
-            modifier = modifier
-        )
     }
 }
