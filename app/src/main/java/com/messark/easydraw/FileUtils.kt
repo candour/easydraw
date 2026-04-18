@@ -97,4 +97,29 @@ object FileUtils {
             null
         }
     }
+
+    suspend fun processBitmapForUnderLines(source: Bitmap): Bitmap = withContext(Dispatchers.Default) {
+        val width = source.width
+        val height = source.height
+        val pixels = IntArray(width * height)
+        source.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        for (i in pixels.indices) {
+            val color = pixels[i]
+            val r = Color.red(color)
+            val g = Color.green(color)
+            val b = Color.blue(color)
+
+            // Grayscale using luminosity method
+            val gray = (0.299 * r + 0.587 * g + 0.114 * b).toInt()
+
+            // Set alpha based on inverted gray value (white becomes transparent, black opaque)
+            val alpha = 255 - gray
+
+            // Result is a black pixel with varying transparency
+            pixels[i] = Color.argb(alpha, 0, 0, 0)
+        }
+
+        Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
+    }
 }

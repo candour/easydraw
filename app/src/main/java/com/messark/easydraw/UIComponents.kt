@@ -30,17 +30,34 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
 
 @Composable
-fun FilePickerScreen(onFileSelected: () -> Unit) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+fun FilePickerScreen(onModeSelected: (DrawingMode) -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Button(
-            onClick = onFileSelected,
+            onClick = { onModeSelected(DrawingMode.OVER_LINES) },
             modifier = Modifier
                 .padding(16.dp)
                 .fillMaxWidth(0.8f)
                 .height(100.dp),
             shape = MaterialTheme.shapes.large
         ) {
-            Text("Tap to Open a Picture or PDF", fontSize = 20.sp)
+            Text("Draw Over Lines", fontSize = 20.sp)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        Button(
+            onClick = { onModeSelected(DrawingMode.UNDER_LINES) },
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(0.8f)
+                .height(100.dp),
+            shape = MaterialTheme.shapes.large
+        ) {
+            Text("Draw Under Lines", fontSize = 20.sp)
         }
     }
 }
@@ -77,6 +94,7 @@ fun PageSelectionScreen(thumbnails: List<android.graphics.Bitmap>, onPageSelecte
 fun DrawingCanvasScreen(
     bitmap: android.graphics.Bitmap?,
     strokes: List<Stroke>,
+    drawingMode: DrawingMode,
     currentColor: Color,
     onColorSelected: (Color) -> Unit,
     onStrokeStarted: (Offset) -> Unit,
@@ -111,9 +129,18 @@ fun DrawingCanvasScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
-                .background(Color.LightGray)
+                .background(Color.White)
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDragStart = { offset -> onStrokeStarted(offset) },
+                        onDrag = { change, _ ->
+                            change.consume()
+                            onStrokeUpdated(change.position)
+                        }
+                    )
+                }
         ) {
-            if (bitmap != null) {
+            if (bitmap != null && drawingMode == DrawingMode.OVER_LINES) {
                 Image(
                     bitmap = bitmap.asImageBitmap(),
                     contentDescription = null,
@@ -123,17 +150,7 @@ fun DrawingCanvasScreen(
             }
 
             Canvas(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = { offset -> onStrokeStarted(offset) },
-                            onDrag = { change, _ ->
-                                change.consume()
-                                onStrokeUpdated(change.position)
-                            }
-                        )
-                    }
+                modifier = Modifier.fillMaxSize()
             ) {
                 strokes.forEach { stroke ->
                     drawPath(
@@ -146,6 +163,15 @@ fun DrawingCanvasScreen(
                         )
                     )
                 }
+            }
+
+            if (bitmap != null && drawingMode == DrawingMode.UNDER_LINES) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Fit
+                )
             }
         }
 

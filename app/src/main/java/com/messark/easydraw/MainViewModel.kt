@@ -17,6 +17,11 @@ sealed class AppScreen {
     object DrawingCanvas : AppScreen()
 }
 
+enum class DrawingMode {
+    OVER_LINES,
+    UNDER_LINES
+}
+
 data class Stroke(
     val path: Path,
     val color: Color,
@@ -27,6 +32,9 @@ data class Stroke(
 class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _currentScreen = MutableStateFlow<AppScreen>(AppScreen.FilePicker)
     val currentScreen: StateFlow<AppScreen> = _currentScreen.asStateFlow()
+
+    private val _drawingMode = MutableStateFlow(DrawingMode.OVER_LINES)
+    val drawingMode: StateFlow<DrawingMode> = _drawingMode.asStateFlow()
 
     private val _selectedUri = MutableStateFlow<Uri?>(null)
     val selectedUri: StateFlow<Uri?> = _selectedUri.asStateFlow()
@@ -45,6 +53,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun navigateTo(screen: AppScreen) {
         _currentScreen.value = screen
+    }
+
+    fun setDrawingMode(mode: DrawingMode) {
+        _drawingMode.value = mode
     }
 
     fun selectUri(uri: Uri?) {
