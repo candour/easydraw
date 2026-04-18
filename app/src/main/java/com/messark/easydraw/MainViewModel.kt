@@ -4,8 +4,8 @@ import android.app.Application
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.lifecycle.AndroidViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,14 +22,24 @@ enum class DrawingMode {
     UNDER_LINES
 }
 
+data class LineSegment(
+    val start: Offset,
+    val end: Offset,
+    val width: Float
+)
+
 data class Stroke(
-    val path: Path,
+    val segments: List<LineSegment>,
     val color: Color,
-    val width: Float,
-    val version: Int = 0 // Used to trigger recomposition when path is mutated
+    val version: Int = 0 // Used to trigger recomposition when segments are added
 )
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
+    companion object {
+        const val MIN_WIDTH_DP = 5f
+        const val MAX_WIDTH_DP = 40f
+    }
+
     private val _currentScreen = MutableStateFlow<AppScreen>(AppScreen.FilePicker)
     val currentScreen: StateFlow<AppScreen> = _currentScreen.asStateFlow()
 
@@ -81,12 +91,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _strokes.value = _strokes.value + stroke
     }
 
-    fun updateLastStroke(path: Path) {
+    fun addSegmentToLastStroke(segment: LineSegment) {
         val currentStrokes = _strokes.value.toMutableList()
         if (currentStrokes.isNotEmpty()) {
-            val lastStroke = currentStrokes.last()
-            // Increment version to ensure StateFlow sees a change even if Path object is same
-            currentStrokes[currentStrokes.size - 1] = lastStroke.copy(path = path, version = lastStroke.version + 1)
+            val lastStrokeIdx = currentStrokes.size - 1
+            val lastStroke = currentStrokes[lastStrokeIdx]
+            val updatedSegments = lastStroke.segments + segment
+            currentStrokes[lastStrokeIdx] = lastStroke.copy(
+                segments = updatedSegments,
+                version = lastStroke.version + 1
+            )
             _strokes.value = currentStrokes
         }
     }

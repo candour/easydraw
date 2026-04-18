@@ -29,7 +29,7 @@ class MainViewModelTest {
     fun `undo removes last stroke`() = runBlocking {
         val application = mockk<Application>()
         val viewModel = MainViewModel(application)
-        val stroke = Stroke(mockk(), Color.Red, 40f)
+        val stroke = Stroke(emptyList(), Color.Red)
         viewModel.addStroke(stroke)
         assertEquals(1, viewModel.strokes.value.size)
         viewModel.undo()
@@ -41,7 +41,7 @@ class MainViewModelTest {
         val application = mockk<Application>()
         val viewModel = MainViewModel(application)
         viewModel.navigateTo(AppScreen.DrawingCanvas)
-        viewModel.addStroke(Stroke(mockk(), Color.Red, 40f))
+        viewModel.addStroke(Stroke(emptyList(), Color.Red))
 
         viewModel.reset()
 
