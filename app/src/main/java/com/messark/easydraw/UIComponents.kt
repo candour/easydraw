@@ -88,9 +88,26 @@ fun FilePickerScreen(
 }
 
 @Composable
-fun PageSelectionScreen(thumbnails: List<android.graphics.Bitmap>, onPageSelected: (Int) -> Unit) {
+fun PageSelectionScreen(
+    thumbnails: List<android.graphics.Bitmap>,
+    onClose: () -> Unit,
+    onPageSelected: (Int) -> Unit
+) {
     Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
-        Text("Pick a page to color:", style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 16.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Pick a page to color:",
+                style = MaterialTheme.typography.headlineMedium,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+            IconButton(onClick = onClose) {
+                Icon(Icons.Default.Close, contentDescription = "Close", modifier = Modifier.size(36.dp))
+            }
+        }
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 128.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -130,7 +147,7 @@ fun DrawingCanvasScreen(
 ) {
     val colors = listOf(
         Color.Red, Color(0xFFFFA500), Color.Yellow, Color.Green,
-        Color.Blue, Color(0xFF800080), Color(0xFF8B4513), Color.Black
+        Color.Blue, Color(0xFF800080), Color(0xFF8B4513), Color.Black, Color.White
     )
 
     val density = LocalDensity.current
@@ -273,8 +290,13 @@ fun DrawingCanvasScreen(
                         .clip(CircleShape)
                         .background(color)
                         .border(
+                            width = 1.dp,
+                            color = Color.LightGray,
+                            shape = CircleShape
+                        )
+                        .border(
                             width = if (color == currentColor) 4.dp else 0.dp,
-                            color = Color.White,
+                            color = if (color == Color.White) Color.Black else Color.White,
                             shape = CircleShape
                         )
                         .clickable { onColorSelected(color) }
