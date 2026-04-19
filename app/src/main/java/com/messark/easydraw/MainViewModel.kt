@@ -122,6 +122,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         _currentColor.value = color
     }
 
+    fun closeDrawing() {
+        if (_pdfThumbnails.value.isNotEmpty()) {
+            _selectedBitmap.value?.recycle()
+            _selectedBitmap.value = null
+            _strokes.value = emptyList()
+            _currentScreen.value = AppScreen.PageSelection
+        } else {
+            reset()
+        }
+    }
+
     fun reset() {
         _selectedUri.value = null
         _selectedBitmap.value?.recycle()

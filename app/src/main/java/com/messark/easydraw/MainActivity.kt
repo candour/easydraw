@@ -77,7 +77,10 @@ class MainActivity : ComponentActivity() {
                                     launcher.launch(arrayOf("image/*", "application/pdf"))
                                 }
                             )
-                            AppScreen.PageSelection -> PageSelectionScreen(pdfThumbnails) { pageIndex ->
+                            AppScreen.PageSelection -> PageSelectionScreen(
+                                thumbnails = pdfThumbnails,
+                                onClose = { viewModel.reset() }
+                            ) { pageIndex ->
                                 scope.launch {
                                     selectedUri?.let { uri ->
                                         var bitmap = FileUtils.renderPdfPage(this@MainActivity, uri, pageIndex)
@@ -105,7 +108,7 @@ class MainActivity : ComponentActivity() {
                                     viewModel.addSegmentToLastStroke(LineSegment(start, end, width))
                                 },
                                 onUndo = { viewModel.undo() },
-                                onClose = { viewModel.reset() }
+                                onClose = { viewModel.closeDrawing() }
                             )
                         }
                     }
