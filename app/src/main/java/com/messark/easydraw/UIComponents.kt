@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -192,6 +193,14 @@ fun DrawingCanvasScreen(
                 .fillMaxWidth()
                 .background(Color.White)
                 .pointerInput(Unit) {
+                    detectTapGestures(
+                        onTap = { offset ->
+                            onStrokeStarted(offset)
+                            onStrokeUpdated(offset, offset, minWidthPx)
+                        }
+                    )
+                }
+                .pointerInput(Unit) {
                     detectDragGestures(
                         onDragStart = { offset ->
                             lastOffset = offset
@@ -254,13 +263,21 @@ fun DrawingCanvasScreen(
             ) {
                 strokes.forEach { stroke ->
                     stroke.segments.forEach { segment ->
-                        drawLine(
-                            color = stroke.color,
-                            start = segment.start,
-                            end = segment.end,
-                            strokeWidth = segment.width,
-                            cap = StrokeCap.Round
-                        )
+                        if (segment.start == segment.end) {
+                            drawCircle(
+                                color = stroke.color,
+                                center = segment.start,
+                                radius = segment.width / 2f
+                            )
+                        } else {
+                            drawLine(
+                                color = stroke.color,
+                                start = segment.start,
+                                end = segment.end,
+                                strokeWidth = segment.width,
+                                cap = StrokeCap.Round
+                            )
+                        }
                     }
                 }
             }
