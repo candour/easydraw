@@ -73,6 +73,7 @@ class MainActivity : ComponentActivity() {
                                 sensitivity = sensitivity,
                                 onSensitivityChanged = { viewModel.setSensitivity(it) },
                                 onModeSelected = { mode ->
+                                    viewModel.saveSensitivity()
                                     viewModel.setDrawingMode(mode)
                                     launcher.launch(arrayOf("image/*", "application/pdf"))
                                 }

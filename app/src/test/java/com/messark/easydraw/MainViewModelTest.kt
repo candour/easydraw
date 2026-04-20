@@ -1,8 +1,11 @@
 package com.messark.easydraw
 
 import android.app.Application
+import android.content.Context
+import android.content.SharedPreferences
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -11,25 +14,29 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MainViewModelTest {
+    private fun createViewModel(): MainViewModel {
+        val application = mockk<Application>(relaxed = true)
+        val sharedPrefs = mockk<SharedPreferences>(relaxed = true)
+        every { application.getSharedPreferences(any(), any()) } returns sharedPrefs
+        return MainViewModel(application)
+    }
+
     @Test
     fun `initial screen is FilePicker`() = runBlocking {
-        val application = mockk<Application>()
-        val viewModel = MainViewModel(application)
+        val viewModel = createViewModel()
         assertEquals(AppScreen.FilePicker, viewModel.currentScreen.first())
     }
 
     @Test
     fun `navigateTo updates currentScreen`() = runBlocking {
-        val application = mockk<Application>()
-        val viewModel = MainViewModel(application)
+        val viewModel = createViewModel()
         viewModel.navigateTo(AppScreen.DrawingCanvas)
         assertEquals(AppScreen.DrawingCanvas, viewModel.currentScreen.first())
     }
 
     @Test
     fun `undo removes last stroke`() = runBlocking {
-        val application = mockk<Application>()
-        val viewModel = MainViewModel(application)
+        val viewModel = createViewModel()
         val stroke = Stroke(emptyList(), Color.Red)
         viewModel.addStroke(stroke)
         assertEquals(1, viewModel.strokes.value.size)
@@ -39,8 +46,7 @@ class MainViewModelTest {
 
     @Test
     fun `reset clears state and returns to FilePicker`() = runBlocking {
-        val application = mockk<Application>()
-        val viewModel = MainViewModel(application)
+        val viewModel = createViewModel()
         viewModel.navigateTo(AppScreen.DrawingCanvas)
         viewModel.addStroke(Stroke(emptyList(), Color.Red))
 
@@ -52,8 +58,7 @@ class MainViewModelTest {
 
     @Test
     fun `addSegmentToLastStroke handles dot segment`() = runBlocking {
-        val application = mockk<Application>()
-        val viewModel = MainViewModel(application)
+        val viewModel = createViewModel()
         val stroke = Stroke(emptyList(), Color.Red)
         viewModel.addStroke(stroke)
 
