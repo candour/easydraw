@@ -1,6 +1,7 @@
 package com.messark.easydraw
 
 import android.app.Application
+import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import androidx.compose.runtime.mutableStateListOf
@@ -38,7 +39,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     companion object {
         const val MIN_WIDTH_DP = 5f
         const val MAX_WIDTH_DP = 40f
+        private const val PREFS_NAME = "easydraw_prefs"
+        private const val KEY_SENSITIVITY = "sensitivity"
     }
+
+    private val sharedPreferences = application.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
     private val _currentScreen = MutableStateFlow<AppScreen>(AppScreen.FilePicker)
     val currentScreen: StateFlow<AppScreen> = _currentScreen.asStateFlow()
@@ -46,7 +51,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val _drawingMode = MutableStateFlow(DrawingMode.OVER_LINES)
     val drawingMode: StateFlow<DrawingMode> = _drawingMode.asStateFlow()
 
-    private val _sensitivity = MutableStateFlow(0.5f)
+    private val _sensitivity = MutableStateFlow(sharedPreferences.getFloat(KEY_SENSITIVITY, 0.5f))
     val sensitivity: StateFlow<Float> = _sensitivity.asStateFlow()
 
     private val _selectedUri = MutableStateFlow<Uri?>(null)
@@ -74,6 +79,10 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setSensitivity(value: Float) {
         _sensitivity.value = value
+    }
+
+    fun saveSensitivity() {
+        sharedPreferences.edit().putFloat(KEY_SENSITIVITY, _sensitivity.value).apply()
     }
 
     fun selectUri(uri: Uri?) {
